@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Repositorio {@link PlanificacionAsignacionEntity}.
+ * <p>
+ * Además de las operaciones CRUD básicas heredadas de {@link JpaRepository},
+ * proporciona consultas para obtener modificar las planifiaciones en base a rotativas o puestos
+ */
 @Repository
 public interface PlanificacionAsignacionRepository extends JpaRepository<PlanificacionAsignacionEntity, Long> {
 

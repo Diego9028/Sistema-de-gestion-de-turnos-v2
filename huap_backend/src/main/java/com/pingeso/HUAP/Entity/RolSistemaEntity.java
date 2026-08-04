@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Son los roles dentro del sistema los cuales tienen control total sobre el correcto funcionamiento de este
+ */
 @Entity
 @Table(name = "Rol_Sistema")
 public class RolSistemaEntity {

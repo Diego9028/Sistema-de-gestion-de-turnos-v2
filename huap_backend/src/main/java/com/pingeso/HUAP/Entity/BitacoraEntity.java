@@ -8,6 +8,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+/** Es un historial que conserva las acciones realizadas dentro de un servicio, quien las realizo
+ * el turno al cual esta relacionado la accion, la solicitud un posible motivo entre otros detalles
+ */
+
 @Builder
 @Data
 @Table(name = "Bitacora_eventos")

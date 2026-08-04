@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Son los roles dentro servicio donde cada uno de estos cuenta distintas facultades dentro del servicio
+ */
 @Entity
 @Table(name = "Rol_Servicio")
 public class RolServicioEntity {

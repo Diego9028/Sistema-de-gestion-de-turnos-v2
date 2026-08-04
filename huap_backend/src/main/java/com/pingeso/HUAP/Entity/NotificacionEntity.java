@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** Comunican al receptor respecto a una novedad respecto al estado de solicitudes
+ */
 @Builder
 @Data
 @Table(name = "Notificacion")

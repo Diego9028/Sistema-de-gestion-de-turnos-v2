@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 
+/** Son el tipo de solicitudes dentro del sistema donde cada una cuenta con un diferente objetivo y flujo.
+ */
 public class TipoSolicitudEntity {
 
     @Id

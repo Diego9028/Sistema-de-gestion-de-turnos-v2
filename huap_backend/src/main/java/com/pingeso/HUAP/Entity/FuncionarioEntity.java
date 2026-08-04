@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Es el personal dentro del sistema donde se tiene la informacion de este como la informacion propia de la persona
+ * su rol, profesion, estado dentro del sistema, etc.
+ */
 @Entity
 @Builder
 @Data

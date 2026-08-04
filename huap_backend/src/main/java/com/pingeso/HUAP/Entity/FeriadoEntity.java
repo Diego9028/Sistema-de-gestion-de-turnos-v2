@@ -5,12 +5,13 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/** Es un feriado con la descripcion propia del feriado
+ */
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-
 @Entity
 @Table(name = "feriados")
 public class FeriadoEntity {

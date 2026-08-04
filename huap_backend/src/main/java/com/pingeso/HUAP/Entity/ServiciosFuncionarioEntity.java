@@ -2,6 +2,8 @@ package com.pingeso.HUAP.Entity;
 
 import jakarta.persistence.*;
 
+/** Contiene los servicios de un funcionario ademas del rol particular dentro de cada uno de estos.
+ */
 @Entity
 @Table(name = "Servicios_Funcionario")
 public class ServiciosFuncionarioEntity {

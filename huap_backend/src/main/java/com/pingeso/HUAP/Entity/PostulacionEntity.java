@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+/** Estipula el formato de una postulacion a una oferta de turno
+ */
 @Builder
 @Data
 @NoArgsConstructor

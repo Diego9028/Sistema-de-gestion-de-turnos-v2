@@ -8,6 +8,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+/**  Es el formato de las solicitudes dentro del sistema donde se tiene informacion del funcionario. el estado de la
+ * solicitud, fecha, entre otros datos particulares.
+ */
 @Builder
 @Data
 @Table(name = "Solicitudes")

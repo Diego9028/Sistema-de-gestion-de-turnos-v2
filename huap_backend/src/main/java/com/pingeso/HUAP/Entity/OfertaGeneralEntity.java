@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/** Estipula el formato de una oferta general de turno dentro un servicio y el estado de esta misma
+ */
 @Builder
 @Data
 @NoArgsConstructor

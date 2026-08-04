@@ -11,13 +11,29 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repositorio {@link OfertaGeneralEntity}.
+ * <p>
+ * Además de las operaciones CRUD básicas heredadas de {@link JpaRepository},
+ * proporciona consultas para filtrar ofertas por ofertor, servicio o lista de turnos (con sus postulaciones cargadas),
+ * así como mecanismos de bloqueo pesimista para concurrencia.
+ * </p>
+ */
 @Repository
 public interface OfertaGeneralRepository extends JpaRepository<OfertaGeneralEntity, Long> {
 
+    /** Busca y obtiene una lista de ofertas generales publicadas por un funcionario ofertor específico. */
     List<OfertaGeneralEntity> findByOfertor_IdFuncionario(Long idFuncionario);
-
+    /** Obtiene una lista de ofertas generales asociadas a un servicio específico, navegando a través del turno. */
     List<OfertaGeneralEntity> findByTurno_Servicio_IdServicio(Long idServicio);
 
+    /**
+     * Obtiene una lista única de ofertas generales pertenecientes a un conjunto de turnos,
+     * realizando la carga anticipada ({@code FETCH}) de sus postulaciones y postulantes para evitar consultas N+1.
+     * <p>
+     * Los resultados se devuelven ordenados por fecha de creación descendentemente (las más recientes primero).
+     * </p>
+     */
     @Query("""
         SELECT DISTINCT o
         FROM OfertaGeneralEntity o
