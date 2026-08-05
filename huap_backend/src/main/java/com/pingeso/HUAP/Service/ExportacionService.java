@@ -32,6 +32,16 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Servicio encargado de generar archivos CSV con información operativa del sistema.
+ *
+ * <p>Permite exportar los funcionarios vigentes asociados a un servicio y los turnos de
+ * un mes determinado. Para la exportación de turnos también consulta la bitácora y las
+ * ofertas generales, con el fin de identificar el origen más reciente de cada asignación.</p>
+ *
+ * <p>Los archivos se generan en UTF-8, incluyen la marca BOM para facilitar su apertura
+ * en aplicaciones de hojas de cálculo y utilizan punto y coma como separador.</p>
+ */
 @Service
 public class ExportacionService {
 
@@ -41,6 +51,16 @@ public class ExportacionService {
     private final BitacoraRepository bitacoraRepository;
     private final OfertaGeneralRepository ofertaGeneralRepository;
 
+    /**
+     * Construye el servicio con los repositorios necesarios para consultar funcionarios,
+     * servicios, turnos, eventos de bitácora y ofertas generales.
+     *
+     * @param serviciosFuncionarioRepository repositorio de asociaciones entre funcionarios y servicios.
+     * @param servicioRepository repositorio de servicios.
+     * @param turnoRepository repositorio de turnos.
+     * @param bitacoraRepository repositorio de eventos registrados en la bitácora.
+     * @param ofertaGeneralRepository repositorio de ofertas generales de turnos.
+     */
     public ExportacionService(
             ServiciosFuncionarioRepository serviciosFuncionarioRepository,
             ServicioRepository servicioRepository,
@@ -55,6 +75,16 @@ public class ExportacionService {
         this.ofertaGeneralRepository = ofertaGeneralRepository;
     }
 
+    /**
+     * Genera un archivo CSV con los funcionarios vigentes asociados a un servicio.
+     *
+     * <p>La exportación incluye identificación, RUT, nombre, profesión, servicio y rol
+     * desempeñado dentro del servicio.</p>
+     *
+     * @param idServicio identificador del servicio cuyos funcionarios se exportarán.
+     * @return contenido del archivo CSV codificado en UTF-8.
+     * @throws RuntimeException si el servicio no existe o se encuentra eliminado.
+     */
     public byte[] exportarFuncionariosPorServicioCsv(Long idServicio) {
         ServicioEntity servicio = servicioRepository.findById(idServicio)
                 .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
@@ -90,6 +120,16 @@ public class ExportacionService {
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Convierte un valor a una representación segura para una celda CSV.
+     *
+     * <p>Los valores no nulos se encierran entre comillas dobles y las comillas internas
+     * se duplican, de acuerdo con el formato CSV. Los valores nulos se representan como
+     * una celda vacía.</p>
+     *
+     * @param valor valor que se incorporará al archivo.
+     * @return texto escapado para su escritura en una celda CSV.
+     */
     private String valor(Object valor) {
         if (valor == null) {
             return "";
@@ -103,6 +143,21 @@ public class ExportacionService {
     
 
 
+    /**
+     * Genera un archivo CSV con los turnos correspondientes a un mes.
+     *
+     * <p>La consulta puede limitarse opcionalmente a un funcionario y a un servicio. Por
+     * cada turno se incluyen sus fechas, horario, duración, funcionario, servicio, puesto
+     * y el origen inferido a partir de la bitácora y de las ofertas generales.</p>
+     *
+     * @param anio año del período que se exportará.
+     * @param mes mes del período, entre 1 y 12.
+     * @param idFuncionario identificador opcional del funcionario por el que se filtrará.
+     * @param idServicio identificador opcional del servicio por el que se filtrará.
+     * @return contenido del archivo CSV codificado en UTF-8.
+     * @throws RuntimeException si no se indica año o mes, o si el mes está fuera del rango válido.
+     * @throws java.time.DateTimeException si el año y el mes no forman una fecha válida.
+     */
     public byte[] exportarTurnosCsv(
         Integer anio,
         Integer mes,
@@ -201,6 +256,14 @@ public class ExportacionService {
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Construye el nombre completo de un funcionario omitiendo componentes nulos.
+     *
+     * @param nombre nombres del funcionario.
+     * @param apelPat apellido paterno.
+     * @param apelMat apellido materno.
+     * @return nombre completo sin espacios sobrantes.
+     */
     private String construirNombreCompleto(String nombre, String apelPat, String apelMat) {
         return String.join(" ",
                 nombre != null ? nombre : "",
@@ -209,6 +272,16 @@ public class ExportacionService {
         ).trim();
     }
 
+    /**
+     * Calcula la duración de un turno en horas con dos decimales.
+     *
+     * <p>Cuando la hora de término es anterior o igual a la de inicio, se considera que
+     * el turno termina durante el día siguiente. Si alguna hora es nula, retorna cero.</p>
+     *
+     * @param horaInicio hora de inicio del turno.
+     * @param horaFin hora de término del turno.
+     * @return duración del turno expresada en horas.
+     */
     private BigDecimal calcularHoras(LocalTime horaInicio, LocalTime horaFin) {
         if (horaInicio == null || horaFin == null) {
             return BigDecimal.ZERO;
@@ -223,17 +296,40 @@ public class ExportacionService {
         return BigDecimal.valueOf(duracion.toMinutes())
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
+    /**
+     * Información final sobre el origen de un turno que se escribirá en el CSV.
+     *
+     * @param origen categoría general del origen.
+     * @param detalle explicación legible del origen identificado.
+     */
     private record OrigenTurnoInfo(
             String origen,
             String detalle
     ) {}
 
+    /**
+     * Posible origen de un turno obtenido desde un evento o una oferta.
+     *
+     * @param origen categoría del origen candidato.
+     * @param detalle descripción del evento que lo produjo.
+     * @param fecha fecha utilizada para seleccionar el candidato más reciente.
+     */
     private record OrigenTurnoCandidato(
             String origen,
             String detalle,
             LocalDateTime fecha
     ) {}
 
+    /**
+     * Carga y agrupa los eventos de bitácora relacionados con los turnos indicados.
+     *
+     * <p>Un evento puede asociarse directamente a un turno o indirectamente mediante el
+     * turno emisor y el turno receptor de una solicitud. Las listas resultantes se ordenan
+     * desde el evento más reciente al más antiguo.</p>
+     *
+     * @param idsTurnos identificadores de los turnos consultados.
+     * @return mapa que asocia cada identificador de turno con sus eventos de bitácora.
+     */
     private Map<Long, List<BitacoraEntity>> cargarEventosPorTurno(List<Long> idsTurnos) {
         Map<Long, List<BitacoraEntity>> eventosPorTurno = new HashMap<>();
 
@@ -265,6 +361,13 @@ public class ExportacionService {
         return eventosPorTurno;
     }
 
+    /**
+     * Agrega un evento al grupo correspondiente a un turno, ignorando referencias nulas.
+     *
+     * @param eventosPorTurno mapa de eventos agrupados por turno.
+     * @param turno turno al que se asociará el evento.
+     * @param evento evento que se incorporará.
+     */
     private void agregarEvento(
             Map<Long, List<BitacoraEntity>> eventosPorTurno,
             TurnoEntity turno,
@@ -279,6 +382,12 @@ public class ExportacionService {
                 .add(evento);
     }
 
+    /**
+     * Carga las ofertas generales asociadas a un conjunto de turnos y las agrupa por su id.
+     *
+     * @param idsTurnos identificadores de los turnos consultados.
+     * @return mapa de ofertas generales agrupadas por identificador de turno.
+     */
     private Map<Long, List<OfertaGeneralEntity>> cargarOfertasPorTurno(List<Long> idsTurnos) {
         if (idsTurnos == null || idsTurnos.isEmpty()) {
             return new HashMap<>();
@@ -291,6 +400,18 @@ public class ExportacionService {
                 .filter(o -> o.getTurno() != null && o.getTurno().getIdTurno() != null)
                 .collect(Collectors.groupingBy(o -> o.getTurno().getIdTurno()));
     }
+    /**
+     * Determina el origen más probable de un turno a partir de sus eventos y ofertas.
+     *
+     * <p>Cuando existen varios candidatos, selecciona el más reciente. Si no se encuentra
+     * evidencia auditable y el turno pertenece a una rotativa, se clasifica como generado
+     * desde la planificación mensual; en cualquier otro caso se indica que no hay información.</p>
+     *
+     * @param turno turno cuyo origen se desea determinar.
+     * @param eventosPorTurno eventos de bitácora agrupados por turno.
+     * @param ofertasPorTurno ofertas generales agrupadas por turno.
+     * @return categoría y detalle del origen seleccionado.
+     */
     private OrigenTurnoInfo determinarOrigenTurno(
             TurnoEntity turno,
             Map<Long, List<BitacoraEntity>> eventosPorTurno,
@@ -398,6 +519,13 @@ public class ExportacionService {
                 || tipoEvento.contains("ROTATIVA");
     }
 */
+    /**
+     * Indica si un evento de bitácora corresponde a una intervención manual sobre un turno.
+     *
+     * @param evento evento que se evaluará.
+     * @return {@code true} cuando el tipo de evento representa una asignación, liberación,
+     *         reasignación o modificación manual.
+     */
     private boolean esAsignacionManual(BitacoraEntity evento) {
         String tipoEvento = normalizar(evento.getTipoEvento());
 
@@ -408,6 +536,11 @@ public class ExportacionService {
                 || tipoEvento.contains("MODIFICACION_MANUAL_TURNO");
     }
 
+    /**
+     * Crea la respuesta estándar utilizada cuando no existen antecedentes sobre el origen.
+     *
+     * @return información que señala la ausencia de eventos registrados.
+     */
     private OrigenTurnoInfo sinInformacion() {
         return new OrigenTurnoInfo(
                 "Sin información",
@@ -415,6 +548,12 @@ public class ExportacionService {
         );
     }
 
+    /**
+     * Normaliza un texto para comparar tipos de eventos sin distinguir mayúsculas ni tildes.
+     *
+     * @param texto texto que se normalizará.
+     * @return texto en mayúsculas y sin las vocales acentuadas; cadena vacía si es nulo.
+     */
     private String normalizar(String texto) {
         if (texto == null) {
             return "";
@@ -430,6 +569,16 @@ public class ExportacionService {
                 .replace("Ú", "U");
     }
 
+    /**
+     * Clasifica un evento de bitácora como posible origen del turno.
+     *
+     * <p>Reconoce generaciones desde planificación, modificaciones manuales, ofertas
+     * generales cerradas y solicitudes aprobadas, incluyendo intercambios y ofertas
+     * particulares.</p>
+     *
+     * @param evento evento de bitácora que se evaluará.
+     * @return candidato de origen, o un {@link Optional} vacío si el evento no es clasificable.
+     */
     private Optional<OrigenTurnoCandidato> clasificarEventoComoOrigen(BitacoraEntity evento) {
         if (evento == null) {
             return Optional.empty();
@@ -515,6 +664,13 @@ public class ExportacionService {
         return Optional.empty();
     }
 
+    /**
+     * Clasifica una oferta general cerrada como posible origen de un turno.
+     *
+     * @param oferta oferta general que se evaluará.
+     * @return candidato de origen cuando la oferta está cerrada; en caso contrario,
+     *         un {@link Optional} vacío.
+     */
     private Optional<OrigenTurnoCandidato> clasificarOfertaGeneralComoOrigen(OfertaGeneralEntity oferta) {
         if (oferta == null || oferta.getEstado() != OfertaGeneralEntity.EstadoOferta.CERRADA) {
             return Optional.empty();
