@@ -55,9 +55,8 @@ import PlanificacionView from "./Planificacion";
 
 const Prop4 = ({ tweaks = {} }) => {
   const auth = useAuth();
-  const [currentView, setCurrentView] = useState("login");
+  const [currentView, setCurrentView] = useState(() => auth?.isLogged ? "agenda" : "login");
   const [activeTab, setActiveTab] = useState("home");
-
   const [preAuthToken, setPreAuthToken] = useState(null);
   const [serviciosDisponibles, setServiciosDisponibles] = useState([]);
   const [pendingRegistrationMessage, setPendingRegistrationMessage] = useState('');
