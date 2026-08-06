@@ -21,28 +21,66 @@ const axiosInstance = axios.create({
  */
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = getToken();
+        let token = getToken();
 
-        // Si existe token pero ya expiró, limpiar sesión y redirigir antes de hacer la petición
+        const publicAuthEndpoints = [
+            '/funcionarios/login',
+            '/funcionarios/login/select-service'
+        ];
+
+        const isPublicAuthRequest = publicAuthEndpoints.some(
+            endpoint => config.url?.startsWith(endpoint)
+        );
+
+        /*
+         * Los endpoints públicos de autenticación no necesitan el JWT final.
+         * Si existe un token antiguo o vencido, se elimina, pero no se cancela
+         * la petición de inicio de sesión.
+         */
+        if (isPublicAuthRequest) {
+            if (token && !isTokenValid()) {
+                console.warn(
+                    '[Axios] Se eliminó un token vencido antes de iniciar sesión.'
+                );
+
+                clearAuth();
+                token = null;
+            }
+
+            delete config.headers.Authorization;
+            return config;
+        }
+
+        /*
+         * Para los endpoints protegidos sí se rechaza la petición cuando
+         * el token está vencido.
+         */
         if (token && !isTokenValid()) {
-            console.warn('[Axios] Token expirado. Limpiando sesión antes de la petición.');
+            console.warn(
+                '[Axios] Token expirado. Limpiando sesión antes de la petición.'
+            );
+
             clearAuth();
+
             if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';
             }
-            return Promise.reject(new Error('Token expirado'));
+
+            return Promise.reject(new Error('La sesión ha expirado'));
         }
 
         if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+            config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Log para debugging (activar con VITE_DEBUG=true)
         if (import.meta.env.VITE_DEBUG === 'true') {
-            console.log(`[Axios] ${config.method?.toUpperCase()} ${config.url}`, {
-                headers: config.headers,
-                data: config.data
-            });
+            console.log(
+                `[Axios] ${config.method?.toUpperCase()} ${config.url}`,
+                {
+                    headers: config.headers,
+                    data: config.data
+                }
+            );
         }
 
         return config;

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { isAuthenticated, getCurrentUser, logout as authLogout } from '../services/authService'
-
+import { getToken, isTokenValid, clearAuth } from '../utils/tokenManager';
 // Roles usados en la aplicación (mapeo del backend)
 export const Roles = {
     JEFATURA: 'JEFATURA',
@@ -18,10 +18,25 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const loadUser = () => {
             try {
+                const token = getToken()
+
+                // Si existe un token, pero está vencido o es inválido,
+                // eliminar toda la información de la sesión
+                if (token && !isTokenValid()) {
+                    console.warn(
+                        "[AuthContext] Se eliminó una sesión vencida al iniciar la aplicación."
+                    )
+
+                    clearAuth()
+                    setUser(null)
+                    return
+                }
+
                 if (isAuthenticated()) {
                     const userData = getCurrentUser()
+
                     if (userData) {
-                        // Mapear los datos del backend al formato del contexto
+                        // Mapear los datos del token al formato del contexto
                         setUser({
                             id: userData.userId,
                             nombre: userData.nombreCompleto || userData.nombre,
@@ -30,10 +45,17 @@ export function AuthProvider({ children }) {
                             servicioId: userData.servicioId,
                             userId: userData.userId
                         })
+                    } else {
+                        clearAuth()
+                        setUser(null)
                     }
+                } else {
+                    setUser(null)
                 }
             } catch (e) {
                 console.error("Error al cargar usuario desde token:", e)
+                clearAuth()
+                setUser(null)
             } finally {
                 setLoading(false)
             }
